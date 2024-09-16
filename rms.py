@@ -201,7 +201,7 @@ class Rms(QMainWindow):
     def initUI(self):
         self.startLights = StartLights()
         rectDesktop = app.desktop().availableGeometry()
-        self.startLights.resize(rectDesktop.width() / 2, (rectDesktop.width() / 2) / 5)
+        self.startLights.resize(rectDesktop.width() // 2, rectDesktop.width() // 10)
         self.setWindowTitle(
             "Race Management System V1.0   CU Version:" + str(self.cuVersion)
         )
