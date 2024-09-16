@@ -1,97 +1,97 @@
 """ Carrera(R) Digital 124/132 race management system based on carreralib"""
+
 """ Copyright 2017 Thomas Reich thomas@geekazoids.net """
 """ V1.0 Initial release """
 """ V1.0.1 Formatting of display, outputs and other display improvements """
 
 from PyQt5.QtWidgets import (
-     QApplication,
-     QWidget,
-     QLCDNumber,
-     QProgressBar,
-     QPushButton,
-     QLabel,
-     QFrame,
-     QVBoxLayout,
-     QHBoxLayout,
-     QGroupBox,
-     QTabWidget,
-     QComboBox,
-     QCheckBox,
-     QLineEdit,
-     QGridLayout,
-     QShortcut,
-     QInputDialog,
-     QDialog,
-     QListWidget,
-     QSizePolicy,
-     QTableWidget,
-     QTableWidgetItem,
-     QMainWindow
+    QApplication,
+    QWidget,
+    QLCDNumber,
+    QProgressBar,
+    QPushButton,
+    QLabel,
+    QFrame,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGroupBox,
+    QTabWidget,
+    QComboBox,
+    QCheckBox,
+    QLineEdit,
+    QGridLayout,
+    QShortcut,
+    QInputDialog,
+    QDialog,
+    QListWidget,
+    QSizePolicy,
+    QTableWidget,
+    QTableWidgetItem,
+    QMainWindow,
 )
 
 from PyQt5.QtNetwork import QNetworkDatagram, QHostAddress, QUdpSocket
 
 from PyQt5.QtCore import (
-     QTimer,
-     QTime,
-     QObject,
-     QByteArray,
-     pyqtProperty,
-     QPropertyAnimation,
-     Qt
+    QTimer,
+    QTime,
+    QObject,
+    QByteArray,
+    pyqtProperty,
+    QPropertyAnimation,
+    Qt,
 )
 
 try:
     from PyQt5.QtBluetooth import (
-         QBluetoothDeviceDiscoveryAgent,
-         QLowEnergyController, QBluetoothAddress
+        QBluetoothDeviceDiscoveryAgent,
+        QLowEnergyController,
+        QBluetoothAddress,
     )
 except ImportError:
     QBluetoothDeviceDiscoveryAgent = None
 
 
-from PyQt5.QtGui import (
-     QKeySequence,
-     QFont,
-     QPainter,
-     QPalette,
-     QColor
-)
+from PyQt5.QtGui import QKeySequence, QFont, QPainter, QPalette, QColor
 
 import logging
 import protocol
 
 
-#from carreralib import ControlUnit
+# from carreralib import ControlUnit
 from collections import namedtuple
 import sys, os
+
 DoNotUseBt = False
-if sys.platform == 'darwin':
-    os.environ['QT_EVENT_DISPATCHER_CORE_FOUNDATION'] = '1'
-    print('OS X detected. Switching to BT network server')
+if sys.platform == "darwin":
+    os.environ["QT_EVENT_DISPATCHER_CORE_FOUNDATION"] = "1"
+    print("OS X detected. Switching to BT network server")
     DoNotUseBt = True
 
 logger = logging.getLogger(__name__)
 
+
 def posgetter(driver):
     return (-driver.lapcount, driver.time)
 
+
 def formattime(time, longfmt=False):
     if time is None:
-        return '0.0'
+        return "0.0"
     s = time // 1000
     ms = time % 1000
     if not longfmt:
-        return '%d.%03d' % (s, ms)
+        return "%d.%03d" % (s, ms)
     elif s < 3600:
-        return '%d:%02d.%03d' % (s // 60, s % 60, ms)
+        return "%d:%02d.%03d" % (s // 60, s % 60, ms)
     else:
-        return '%d:%02d:%02d.%03d' % (s // 3600, (s // 60) % 60, s % 60, ms)
+        return "%d:%02d:%02d.%03d" % (s // 3600, (s // 60) % 60, s % 60, ms)
+
 
 class BtSelect(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Connect to Control Unit')
+        self.setWindowTitle("Connect to Control Unit")
         self.initUI()
 
     def initUI(self):
@@ -100,21 +100,22 @@ class BtSelect(QDialog):
         if QBluetoothDeviceDiscoveryAgent != None:
             self.btList = QListWidget()
             self.vLayout.addWidget(self.btList)
-            self.scanBtn = QPushButton('Scan')
+            self.scanBtn = QPushButton("Scan")
             self.hBtnLayout.addWidget(self.scanBtn)
         else:
             self.cuAddressInput = QLineEdit()
             self.hCuAddressLayout = QHBoxLayout()
-            self.hCuAddressLayout.addWidget(QLabel('Enter CU BT address or USB device'))
+            self.hCuAddressLayout.addWidget(QLabel("Enter CU BT address or USB device"))
             self.hCuAddressLayout.addWidget(self.cuAddressInput)
             self.vLayout.addLayout(self.hCuAddressLayout)
-        self.connectBtn = QPushButton('Connect')
+        self.connectBtn = QPushButton("Connect")
         self.hBtnLayout.addWidget(self.connectBtn)
-        self.rejectBtn = QPushButton('Cancel')
+        self.rejectBtn = QPushButton("Cancel")
         self.hBtnLayout.addWidget(self.rejectBtn)
         self.vLayout.addLayout(self.hBtnLayout)
         self.connectBtn.clicked.connect(self.accept)
         self.rejectBtn.clicked.connect(self.reject)
+
 
 class StartLight(QWidget):
     def __init__(self):
@@ -130,13 +131,14 @@ class StartLight(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         if not self.onVal:
-             painter.setBrush(QColor(40, 40, 40))
+            painter.setBrush(QColor(40, 40, 40))
         else:
-             painter.setBrush(Qt.red)
-        painter.drawEllipse(0,0, self.width(), self.height())
+            painter.setBrush(Qt.red)
+        painter.drawEllipse(0, 0, self.width(), self.height())
+
 
 class StartLights(QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         hbox = QHBoxLayout(self)
         self.lightOne = StartLight()
@@ -154,7 +156,8 @@ class StartLights(QWidget):
         lightsPal.setColor(lightsPal.Background, Qt.black)
         self.setPalette(lightsPal)
         self.spacekey = QShortcut(QKeySequence("Space"), self)
-        
+
+
 class Rms(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -165,7 +168,7 @@ class Rms(QMainWindow):
             self.connectBTudp()
         else:
             self.findCU()
-        
+
     def findCU(self):
         if len(sys.argv) == 2:
             self.startRMS(sys.argv[1])
@@ -180,10 +183,10 @@ class Rms(QMainWindow):
                         self.discoverBtDevice.stop()
                     BTdevice = self.btDialog.btList.selectedItems()
                     self.CUconnected = True
-                    if (len(BTdevice)):
-                        self.cuaddress = BTdevice[0].text().split(' -> ')[1]
+                    if len(BTdevice):
+                        self.cuaddress = BTdevice[0].text().split(" -> ")[1]
                     else:
-                        print('No CU selected')
+                        print("No CU selected")
                         self.CUconnected = False
                         return
                 else:
@@ -207,80 +210,85 @@ class Rms(QMainWindow):
         self.discoverBtDevice.start()
 
     def addBtDevice(self, btDevice):
-        if btDevice.name() == 'Control_Unit':
-            self.btDialog.btList.addItem(str(btDevice.name()) + ' -> ' + str(btDevice.address().toString()))
+        if btDevice.name() == "Control_Unit":
+            self.btDialog.btList.addItem(
+                str(btDevice.name()) + " -> " + str(btDevice.address().toString())
+            )
             self.btDialog.btList.setCurrentRow(self.btDialog.btList.count() - 1)
             self.culowEDev = btDevice
             self.discoverBtDevice.stop()
-            
+
     def btScanFinished(self):
         self.btDialog.scanBtn.setEnabled(True)
-        if hasattr(self, 'culowEDev'):
-            print('connect to CU')
+        if hasattr(self, "culowEDev"):
+            print("connect to CU")
             self.btlecentral = QLowEnergyController.createPeripheral(self)
             self.btlecentral.connected.connect(self.discoverBtService)
             self.btlecentral.error.connect(self.btConnectError)
             self.btlecentral.stateChanged.connect(self.btStateChanged)
             self.btlecentral.connectToDevice()
-            
+
     def btScanError(self):
-        print('Bluetooth scan error')
+        print("Bluetooth scan error")
         sys.exit()
-        
+
     def btStateChanged(self):
-        print('BT state changed')
-        
+        print("BT state changed")
+
     def btConnectError(self):
-        print('BT connect error')
+        print("BT connect error")
         sys.exit()
-        
+
     def discoverBtService(self):
         print(self.btlecentral.remoteDeviceUuid())
 
     def btError(self, BTserviceError):
-        print('service Discovery Error')
-        
+        print("service Discovery Error")
+
     def BtServicesDiscovered(self, newBTservice):
-        print('new BT service')
-        
+        print("new BT service")
+
     def connectBTudp(self):
         self.udpSocket = QUdpSocket()
-        self.udpSocket.connectToHost(QHostAddress('127.0.0.1'), 8888)
+        self.udpSocket.connectToHost(QHostAddress("127.0.0.1"), 8888)
         self.udpSocket.readyRead.connect(self.readUDP)
         self.startRMS(self.udpSocket)
-        
+
     def readUDP(self):
         while self.udpSocket.hasPendingDatagrams():
             newDatagram = self.udpSocket.receiveDatagram()
             if newDatagram.data() == "nocu":
-                print('No CU connected')
+                print("No CU connected")
                 sys.exit()
             self.cu.receivedUDP(bytes(newDatagram.data()))
-        
 
     def startRMS(self, device):
-        print('start rms')
-        self.cu = ControlUnit(device, timeout = 1.0)
-        self.cu.request(b'Version')
+        print("start rms")
+        self.cu = ControlUnit(device, timeout=1.0)
+        self.cu.request(b"Version")
 
     def setVersion(self, data):
-        self.setWindowTitle('Race Management System V1.0   CU Version:' + str(data, 'utf-8'))
+        self.setWindowTitle(
+            "Race Management System V1.0   CU Version:" + str(data, "utf-8")
+        )
         self.CUconnected = True
-        
+
     def initUI(self):
         self.last = None
         self.startLights = StartLights()
         rectDesktop = app.desktop().availableGeometry()
-        self.startLights.resize(int(rectDesktop.width()/2), int((rectDesktop.width()/2)/5))
+        self.startLights.resize(
+            int(rectDesktop.width() / 2), int((rectDesktop.width() / 2) / 5)
+        )
         self.rmsframe = RmsFrame(self.cu)
         self.startLights.spacekey.activated.connect(self.rmsframe.racestart)
         self.setCentralWidget(self.rmsframe)
         self.showMaximized()
-   
+
     def run(self):
         self.last = None
         self.cu.request()
-        
+
     def handle_data(self, data):
         if data == self.last:
             self.cu.request()
@@ -296,9 +304,8 @@ class Rms(QMainWindow):
         if self.shutdown:
             sys.exit()
 
-
     def handle_status(self, status):
-#        print(status)
+        #        print(status)
         if status.start > 0 and status.start <= 7:
             self.startLights.show()
             if status.start == 1 or status.start == 2:
@@ -331,33 +338,34 @@ class Rms(QMainWindow):
         self.status = status
 
     def handle_timer(self, timer):
-#        print(timer)
+        #        print(timer)
         driver = self.rmsframe.driverArr[timer.address]
         driver.newlap(timer)
         if self.rmsframe.start is None:
             self.rmsframe.start = timer.timestamp
         self.rmsframe.updateDisplay()
 
+
 class CtrlDialog(QDialog):
     def __init__(self, driverArr):
         super().__init__()
         self.driverArr = driverArr
-        self.setWindowTitle('Assign Controller')
+        self.setWindowTitle("Assign Controller")
         self.vlayout = QVBoxLayout(self)
-        self.table = QTableWidget(6,2)
+        self.table = QTableWidget(6, 2)
         self.table.verticalHeader().hide()
         self.vlayout.addWidget(self.table)
-        self.table.setHorizontalHeaderLabels(['Driver', 'Controller'])
+        self.table.setHorizontalHeaderLabels(["Driver", "Controller"])
         for idx, driverObj in enumerate(driverArr):
             if idx < 6:
                 ctrlCombobox = QComboBox()
-                for ctrlItem in range(1,7):
+                for ctrlItem in range(1, 7):
                     ctrlCombobox.addItem(str(ctrlItem))
-                self.table.setItem(idx,0, QTableWidgetItem(driverObj.name))
+                self.table.setItem(idx, 0, QTableWidgetItem(driverObj.name))
                 ctrlCombobox.setCurrentIndex(idx)
-                self.table.setCellWidget(idx,1, ctrlCombobox)
-        self.setCtrlBtn = QPushButton('Set Controllers')
-        self.closeBtn = QPushButton('Cancel')
+                self.table.setCellWidget(idx, 1, ctrlCombobox)
+        self.setCtrlBtn = QPushButton("Set Controllers")
+        self.closeBtn = QPushButton("Cancel")
         self.hlayout = QHBoxLayout()
         self.vlayout.addLayout(self.hlayout)
         self.hlayout.addWidget(self.setCtrlBtn)
@@ -369,29 +377,34 @@ class CtrlDialog(QDialog):
         self.newDriverArr = [None] * 8
         for cellNum in range(0, 8):
             if cellNum < 6:
-                self.newDriverArr[int(self.table.cellWidget(cellNum, 1).currentText()) - 1] = self.driverArr[cellNum]
-                self.driverArr[cellNum].setCtrlNum(int(self.table.cellWidget(cellNum, 1).currentText()))
+                self.newDriverArr[
+                    int(self.table.cellWidget(cellNum, 1).currentText()) - 1
+                ] = self.driverArr[cellNum]
+                self.driverArr[cellNum].setCtrlNum(
+                    int(self.table.cellWidget(cellNum, 1).currentText())
+                )
             else:
                 self.newDriverArr[cellNum] = self.driverArr[cellNum]
         self.accept()
- 
+
+
 class RaceModeDialog(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Set Race Mode')
-        self.labels = ['', 'Minutes', 'Laps']
+        self.setWindowTitle("Set Race Mode")
+        self.labels = ["", "Minutes", "Laps"]
         self.setupUI()
-    
+
     def setupUI(self):
         self.qualiDataSet = False
         self.practiceDataSet = False
         self.raceDataSet = False
         self.vlayout = QVBoxLayout(self)
-        self.selectRaceGroup = QGroupBox('Race')
+        self.selectRaceGroup = QGroupBox("Race")
         self.raceLayout = QHBoxLayout()
         self.selectRaceGroup.setLayout(self.raceLayout)
         self.selectRaceCombo = QComboBox()
-        self.selectRaceCombo.addItems(['Timed', 'Laps'])
+        self.selectRaceCombo.addItems(["Timed", "Laps"])
         self.selectRaceCombo.currentIndexChanged.connect(self.changeRaceMode)
         self.raceModeInput = QLineEdit()
         self.raceModeInput.setMaxLength(4)
@@ -404,11 +417,11 @@ class RaceModeDialog(QDialog):
         self.raceLayout.addWidget(self.raceModeLabel)
         self.selectRaceCombo.setCurrentIndex(1)
 
-        self.doPractice = QCheckBox('Practice')
+        self.doPractice = QCheckBox("Practice")
         self.doPractice.setChecked(True)
         self.doPractice.stateChanged.connect(self.practiceEnable)
         self.practiceCombo = QComboBox()
-        self.practiceCombo.addItems(['Open', 'Timed', 'Laps'])
+        self.practiceCombo.addItems(["Open", "Timed", "Laps"])
         self.practiceCombo.currentIndexChanged.connect(self.changePracticeMode)
         self.practiceInput = QLineEdit()
         self.practiceInput.setMaxLength(4)
@@ -416,13 +429,13 @@ class RaceModeDialog(QDialog):
         self.practiceLabel = QLabel()
         self.practiceCombo.setCurrentIndex(1)
 
-        self.doQuali = QCheckBox('Qualifying')
+        self.doQuali = QCheckBox("Qualifying")
         self.doQuali.setChecked(True)
         self.doQuali.stateChanged.connect(self.qualiEnable)
         self.qualiCombo = QComboBox()
-        self.qualiCombo.addItems(['Open', 'Timed', 'Laps'])
+        self.qualiCombo.addItems(["Open", "Timed", "Laps"])
         self.qualiCombo.currentIndexChanged.connect(self.changeQualiMode)
-        self.qualiInput = QLineEdit()       
+        self.qualiInput = QLineEdit()
         self.qualiInput.setMaxLength(4)
         self.qualiInput.editingFinished.connect(self.qualiDataEntered)
         self.qualiLabel = QLabel()
@@ -433,10 +446,10 @@ class RaceModeDialog(QDialog):
         self.checkBoxhlayout.addWidget(self.doQuali)
         self.vlayout.addLayout(self.checkBoxhlayout)
         self.practicehbox = QHBoxLayout()
-        self.practiceFrame = QGroupBox('Practice')
+        self.practiceFrame = QGroupBox("Practice")
         self.practiceFrame.setLayout(self.practicehbox)
         self.qualihbox = QHBoxLayout()
-        self.qualiFrame = QGroupBox('Qualifying')
+        self.qualiFrame = QGroupBox("Qualifying")
         self.qualiFrame.setLayout(self.qualihbox)
         self.practicehbox.addWidget(self.practiceCombo)
         self.practicehbox.addWidget(self.practiceInput)
@@ -450,16 +463,16 @@ class RaceModeDialog(QDialog):
         self.vlayout.addStretch(1)
         self.vlayout.addWidget(self.qualiFrame)
 
-        self.startRaceBtn = QPushButton('Start Race')
+        self.startRaceBtn = QPushButton("Start Race")
         self.startRaceBtn.clicked.connect(self.accept)
-        self.cancelBtn = QPushButton('Cancel')
+        self.cancelBtn = QPushButton("Cancel")
         self.cancelBtn.clicked.connect(self.close)
         self.buttonLayout = QHBoxLayout()
         self.vlayout.addLayout(self.buttonLayout)
         self.buttonLayout.addWidget(self.startRaceBtn)
         self.startRaceBtn.setEnabled(False)
         self.buttonLayout.addWidget(self.cancelBtn)
-        
+
     def changeRaceMode(self, index):
         self.raceModeLabel.setText(self.labels[index + 1])
 
@@ -470,7 +483,7 @@ class RaceModeDialog(QDialog):
         else:
             self.practiceDataSet = False
         self.checkRaceData()
-            
+
     def qualiDataEntered(self):
         self.qualiDataSet = False
         if int(self.qualiInput.text()) > 0:
@@ -478,7 +491,7 @@ class RaceModeDialog(QDialog):
         else:
             self.qualiDataSet = False
         self.checkRaceData()
-        
+
     def raceDataEntered(self):
         self.raceDataSet = False
         if int(self.raceModeInput.text()) > 0:
@@ -486,13 +499,13 @@ class RaceModeDialog(QDialog):
         else:
             self.raceDataSet = False
         self.checkRaceData()
-            
+
     def checkRaceData(self):
         if self.qualiDataSet and self.practiceDataSet and self.raceDataSet:
             self.startRaceBtn.setEnabled(True)
         else:
             self.startRaceBtn.setEnabled(False)
-        
+
     def practiceEnable(self, state):
         if state == Qt.Checked:
             self.practiceDataSet = False
@@ -528,17 +541,18 @@ class RaceModeDialog(QDialog):
     def getRaceModeInfo(self):
         self.raceModeDict = {}
         if self.doPractice.isChecked():
-            self.raceModeDict['Practice'] = {}
-            self.raceModeDict['Practice']['amount'] = str(self.practiceInput.text())
-            self.raceModeDict['Practice']['mode'] = self.practiceCombo.currentText()
+            self.raceModeDict["Practice"] = {}
+            self.raceModeDict["Practice"]["amount"] = str(self.practiceInput.text())
+            self.raceModeDict["Practice"]["mode"] = self.practiceCombo.currentText()
         if self.doQuali.isChecked():
-            self.raceModeDict['Qualification'] = {}
-            self.raceModeDict['Qualification']['amount'] = str(self.qualiInput.text())
-            self.raceModeDict['Qualification']['mode'] = self.qualiCombo.currentText()
-        self.raceModeDict['Race'] = {}
-        self.raceModeDict['Race']['amount'] = str(self.raceModeInput.text())
-        self.raceModeDict['Race']['mode'] = self.selectRaceCombo.currentText()
+            self.raceModeDict["Qualification"] = {}
+            self.raceModeDict["Qualification"]["amount"] = str(self.qualiInput.text())
+            self.raceModeDict["Qualification"]["mode"] = self.qualiCombo.currentText()
+        self.raceModeDict["Race"] = {}
+        self.raceModeDict["Race"]["amount"] = str(self.raceModeInput.text())
+        self.raceModeDict["Race"]["mode"] = self.selectRaceCombo.currentText()
         return self.raceModeDict
+
 
 class RmsFrame(QFrame):
     def __init__(self, cu):
@@ -555,71 +569,74 @@ class RmsFrame(QFrame):
         self.bestlaptime = {}
         self.fuelbar = {}
         self.pits = {}
-#        QBAcolor = QByteArray()
-#        QBAcolor.append('color')
-#        self.animation = anim = QPropertyAnimation(self, QBAcolor, self)
-#        anim.setDuration(250)
-#        anim.setLoopCount(2)
-#        anim.setStartValue(QColor(230,230, 0))
-#        anim.setEndValue(QColor(0, 0, 0))
-#        anim.setKeyValueAt(0.5, QColor(150,100,0))
+
+    #        QBAcolor = QByteArray()
+    #        QBAcolor.append('color')
+    #        self.animation = anim = QPropertyAnimation(self, QBAcolor, self)
+    #        anim.setDuration(250)
+    #        anim.setLoopCount(2)
+    #        anim.setStartValue(QColor(230,230, 0))
+    #        anim.setEndValue(QColor(0, 0, 0))
+    #        anim.setKeyValueAt(0.5, QColor(150,100,0))
 
     def buildframe(self):
         self.vLayout = QVBoxLayout(self)
         self.hBtnLayout = QHBoxLayout()
         self.vLayout.addLayout(self.hBtnLayout)
-# Add driver to grid
-        self.addDriverBtn = QPushButton('(A)dd Driver')
+        # Add driver to grid
+        self.addDriverBtn = QPushButton("(A)dd Driver")
         self.addDriverKey = QShortcut(QKeySequence("a"), self)
         self.hBtnLayout.addWidget(self.addDriverBtn)
         self.addDriverBtn.clicked.connect(self.addDriver)
         self.addDriverKey.activated.connect(self.addDriver)
-# Assign Controller
-        self.assignCtrlBtn = QPushButton('Assign Controller')
+        # Assign Controller
+        self.assignCtrlBtn = QPushButton("Assign Controller")
         self.hBtnLayout.addWidget(self.assignCtrlBtn)
         self.assignCtrlBtn.clicked.connect(self.openCtrlDialog)
-# Setup a race
-        self.setupRace = QPushButton('Setup a Race')
+        # Setup a race
+        self.setupRace = QPushButton("Setup a Race")
         self.hBtnLayout.addWidget(self.setupRace)
         self.setupRace.clicked.connect(self.openRaceDlg)
-# Code cars
-        self.codeBtn = QPushButton('(C)ode')
+        # Code cars
+        self.codeBtn = QPushButton("(C)ode")
         self.codeKey = QShortcut(QKeySequence("c"), self)
         self.hBtnLayout.addWidget(self.codeBtn)
         self.codeBtn.clicked.connect(self.pressCode)
         self.codeKey.activated.connect(self.pressCode)
-# Start pace car
-        self.paceBtn = QPushButton('(P)ace')
+        # Start pace car
+        self.paceBtn = QPushButton("(P)ace")
         self.paceKey = QShortcut(QKeySequence("p"), self)
         self.hBtnLayout.addWidget(self.paceBtn)
         self.paceBtn.clicked.connect(self.setPace)
         self.paceKey.activated.connect(self.setPace)
-# set Speed
-        self.setSpeedBtn = QPushButton('Set (S)peed')
+        # set Speed
+        self.setSpeedBtn = QPushButton("Set (S)peed")
         self.setSpeedKey = QShortcut(QKeySequence("s"), self)
         self.hBtnLayout.addWidget(self.setSpeedBtn)
         self.setSpeedBtn.clicked.connect(self.setSpeed)
         self.setSpeedKey.activated.connect(self.setSpeed)
-# set Brakes
-        self.setBrakeBtn = QPushButton('Set (B)rake')
+        # set Brakes
+        self.setBrakeBtn = QPushButton("Set (B)rake")
         self.setBrakeKey = QShortcut(QKeySequence("b"), self)
         self.hBtnLayout.addWidget(self.setBrakeBtn)
         self.setBrakeBtn.clicked.connect(self.setBrake)
         self.setBrakeKey.activated.connect(self.setBrake)
-# Set Fuel
-        self.setFuelBtn = QPushButton('Set (F)uel')
+        # Set Fuel
+        self.setFuelBtn = QPushButton("Set (F)uel")
         self.setFuelKey = QShortcut(QKeySequence("f"), self)
         self.hBtnLayout.addWidget(self.setFuelBtn)
         self.setFuelBtn.clicked.connect(self.setFuel)
         self.setFuelKey.activated.connect(self.setFuel)
-# Reset CU
-        self.resetBtn = QPushButton('(R)eset')
+        # Reset CU
+        self.resetBtn = QPushButton("(R)eset")
         self.resetKey = QShortcut(QKeySequence("r"), self)
         self.hBtnLayout.addWidget(self.resetBtn)
         self.resetBtn.clicked.connect(self.resetRMS)
         self.resetKey.activated.connect(self.resetRMS)
-# Start/Pause Race Enter
-        self.startRaceBtn = QPushButton('Start Race or Enter changed Settings (Spacebar)')
+        # Start/Pause Race Enter
+        self.startRaceBtn = QPushButton(
+            "Start Race or Enter changed Settings (Spacebar)"
+        )
         self.startRaceBtn.clicked.connect(self.racestart)
         self.spacekey = QShortcut(QKeySequence("Space"), self)
         self.spacekey.activated.connect(self.racestart)
@@ -629,27 +646,29 @@ class RmsFrame(QFrame):
         self.hStartBtnLayout.setAlignment(self.startRaceBtn, Qt.AlignHCenter)
         self.hStartBtnLayout.addStretch(1)
         self.pitLaneStatus = QLabel()
-        self.hStartBtnLayout.addWidget(QLabel('Pitlane'))
+        self.hStartBtnLayout.addWidget(QLabel("Pitlane"))
         self.hStartBtnLayout.addWidget(self.pitLaneStatus)
         self.fuelmode = QLabel()
-        self.hStartBtnLayout.addWidget(QLabel('Fuel Mode'))
+        self.hStartBtnLayout.addWidget(QLabel("Fuel Mode"))
         self.hStartBtnLayout.addWidget(self.fuelmode)
         self.lapCounter = QLabel()
-        self.hStartBtnLayout.addWidget(QLabel('Lap Counter'))
+        self.hStartBtnLayout.addWidget(QLabel("Lap Counter"))
         self.hStartBtnLayout.addWidget(self.lapCounter)
         self.vLayout.addLayout(self.hStartBtnLayout)
         self.vLayout.setAlignment(self.hStartBtnLayout, Qt.AlignTop)
-#        self.sepline = QFrame()
-#        self.sepline.setFrameShape(QFrame.HLine)
-#        self.sepline.setFrameShadow(QFrame.Sunken)
-#        self.vLayout.addWidget(self.sepline)
-#        self.vLayout.setAlignment(self.sepline, Qt.AlignTop)
-# Driver Grid
+        #        self.sepline = QFrame()
+        #        self.sepline.setFrameShape(QFrame.HLine)
+        #        self.sepline.setFrameShadow(QFrame.Sunken)
+        #        self.vLayout.addWidget(self.sepline)
+        #        self.vLayout.setAlignment(self.sepline, Qt.AlignTop)
+        # Driver Grid
         self.vLayout.addLayout(self.buildGrid())
-# Session Info
-        self.racemode = QLabel('No Race Started')
+        # Session Info
+        self.racemode = QLabel("No Race Started")
         self.racemode.setAlignment(Qt.AlignCenter)
-        self.racemode.setStyleSheet("QLabel{ border-radius: 10px; background-color: grey; center; color: blue; font: 30pt}")
+        self.racemode.setStyleSheet(
+            "QLabel{ border-radius: 10px; background-color: grey; center; color: blue; font: 30pt}"
+        )
         self.vLayout.addWidget(self.racemode)
         self.vLayout.setAlignment(self.racemode, Qt.AlignBottom)
 
@@ -660,11 +679,20 @@ class RmsFrame(QFrame):
         self.headerFont = QFont()
         self.headerFont.setPointSize(14)
         self.headerFont.setBold(True)
-        self.labelArr = ['Pos', 'Driver', 'Total', 'Laps', 'Laptime', 'Best Lap', 'Fuel', 'Pits']
+        self.labelArr = [
+            "Pos",
+            "Driver",
+            "Total",
+            "Laps",
+            "Laptime",
+            "Best Lap",
+            "Fuel",
+            "Pits",
+        ]
         for index, label in enumerate(self.labelArr):
             self.headerLabel = QLabel(label)
             self.headerLabel.setFont(self.headerFont)
-            self.mainLayout.addWidget(self.headerLabel, 0 , index, Qt.AlignHCenter)
+            self.mainLayout.addWidget(self.headerLabel, 0, index, Qt.AlignHCenter)
         self.mainLayout.setColumnStretch(1, 1)
         self.mainLayout.setColumnStretch(2, 1)
         self.mainLayout.setColumnStretch(3, 2)
@@ -673,7 +701,6 @@ class RmsFrame(QFrame):
         self.mainLayout.setColumnStretch(6, 2)
         self.mainLayout.setColumnStretch(7, 1)
         return self.mainLayout
-
 
     def openCtrlDialog(self):
         self.ctrlDialog = CtrlDialog(self.driverArr)
@@ -691,8 +718,14 @@ class RmsFrame(QFrame):
                 driver.lapcount = 0
                 driver.pitcount = 0
             self.session.setRace(self.setupRaceDlg.getRaceModeInfo())
-            self.racemode.setText(self.session.session + ' ' + str(self.session.amount) + ' ' + self.session.type)
-            self.clearreason = 'start'
+            self.racemode.setText(
+                self.session.session
+                + " "
+                + str(self.session.amount)
+                + " "
+                + self.session.type
+            )
+            self.clearreason = "start"
             self.clearCU()
         else:
             self.setupRaceDlg.close()
@@ -722,34 +755,54 @@ class RmsFrame(QFrame):
         self.posFont.setPointSize(35)
         self.posFont.setBold(True)
         self.driverPos = QLabel(str(driverRow))
-        self.driverPos.setStyleSheet("QLabel{ border-radius: 10px; border-color: black; border: 5px solid black; background-color: white}")
+        self.driverPos.setStyleSheet(
+            "QLabel{ border-radius: 10px; border-color: black; border: 5px solid black; background-color: white}"
+        )
         self.driverPos.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Expanding)
         self.driverPos.setFont(self.posFont)
         self.mainLayout.addWidget(self.driverPos, driverRow, 0)
         self.driverBtn[driverRow] = driver.getNameBtn()
-        self.driverBtn[driverRow].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        self.mainLayout.addWidget(self.driverBtn[driverRow], driverRow ,1)
+        self.driverBtn[driverRow].setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding
+        )
+        self.mainLayout.addWidget(self.driverBtn[driverRow], driverRow, 1)
         self.driverObj[driverRow] = driver
-        self.driverBtn[driverRow].clicked.connect(lambda: self.changeDriver(self.driverBtn[driverRow], self.driverObj[driverRow]))
+        self.driverBtn[driverRow].clicked.connect(
+            lambda: self.changeDriver(
+                self.driverBtn[driverRow], self.driverObj[driverRow]
+            )
+        )
         self.lapcount[driverRow] = driver.getLapCountLCD()
-        self.lapcount[driverRow].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.lapcount[driverRow].setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding
+        )
         self.mainLayout.addWidget(self.lapcount[driverRow], driverRow, 3)
         self.totalFont = QFont()
         self.totalFont.setPointSize(25)
         self.totalFont.setBold(True)
-        self.totalTime[driverRow] = QLabel('00:00')
-        self.totalTime[driverRow].setStyleSheet("QLabel{ border-radius: 10px; border-color: black; border: 5px solid black; background-color: white}")
-        self.totalTime[driverRow].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.totalTime[driverRow] = QLabel("00:00")
+        self.totalTime[driverRow].setStyleSheet(
+            "QLabel{ border-radius: 10px; border-color: black; border: 5px solid black; background-color: white}"
+        )
+        self.totalTime[driverRow].setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding
+        )
         self.totalTime[driverRow].setFont(self.totalFont)
         self.mainLayout.addWidget(self.totalTime[driverRow], driverRow, 2)
         self.laptime[driverRow] = driver.getLapLCD()
-        self.laptime[driverRow].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.laptime[driverRow].setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding
+        )
         self.mainLayout.addWidget(self.laptime[driverRow], driverRow, 4)
         self.bestlaptime[driverRow] = driver.getBestLapLCD()
-        self.bestlaptime[driverRow].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.bestlaptime[driverRow].setSizePolicy(
+            QSizePolicy.Preferred, QSizePolicy.Expanding
+        )
         self.mainLayout.addWidget(self.bestlaptime[driverRow], driverRow, 5)
         self.fuelbar[driverRow] = driver.getFuelBar()
-        self.fuelbar[driverRow].setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        self.fuelbar[driverRow].setSizePolicy(
+            QSizePolicy.Minimum, QSizePolicy.Preferred
+        )
         self.mainLayout.addWidget(self.fuelbar[driverRow], driverRow, 6)
         self.pits[driverRow] = driver.getPits()
         self.pits[driverRow].setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
@@ -758,21 +811,22 @@ class RmsFrame(QFrame):
     def racestart(self):
         self.start = None
         self.cu.start()
-#        self.mainLayout.itemAtPosition(1, 5).widget().setPits('Pit')
-#        self.mainLayout.itemAtPosition(1, 5).widget().setPits('Track')
+
+    #        self.mainLayout.itemAtPosition(1, 5).widget().setPits('Pit')
+    #        self.mainLayout.itemAtPosition(1, 5).widget().setPits('Track')
 
     def resetRMS(self):
-        if hasattr(self, 'driverArr'):
+        if hasattr(self, "driverArr"):
             for driverObj in self.driverArr:
                 driverObj.deleteLater()
         self.start = None
         self.driverArr = [RmsDriver(num) for num in range(1, 9)]
 
-        self.clearreason = 'reset'
+        self.clearreason = "reset"
         self.clearCU()
 
-        if hasattr(self, 'mainLayout'):
-            while True: 
+        if hasattr(self, "mainLayout"):
+            while True:
                 widgetToRemove = self.mainLayout.takeAt(0)
                 if widgetToRemove == None:
                     break
@@ -786,96 +840,124 @@ class RmsFrame(QFrame):
             self.vLayout.addWidget(self.racemode)
             self.vLayout.setAlignment(self.racemode, Qt.AlignBottom)
 
-    def clearCU(self, status = None):
+    def clearCU(self, status=None):
         # discard remaining timer messages
         if not isinstance(status, ControlUnit.Status):
-            self.cu.request(b'clearCU')
+            self.cu.request(b"clearCU")
         else:
-            if self.clearreason == 'reset':
+            if self.clearreason == "reset":
                 self.status = status
                 self.cu.reset()
-            elif self.clearreason == 'start':
+            elif self.clearreason == "start":
                 self.cu.start()
             else:
                 self.cu.request()
 
     def pressCode(self):
-        print('press Code')
-        self.cu.request(b'T8')
+        print("press Code")
+        self.cu.request(b"T8")
 
     def setFuel(self):
-        print('set fuel')
-        self.cu.request(b'T7')
+        print("set fuel")
+        self.cu.request(b"T7")
 
     def setPace(self):
-        print('pace car')
-        self.cu.request(b'T1')
+        print("pace car")
+        self.cu.request(b"T1")
 
     def setSpeed(self):
-        print('set speed')
-        self.cu.request(b'T5')
+        print("set speed")
+        self.cu.request(b"T5")
 
     def setBrake(self):
-        print('set brake')
-        self.cu.request(b'T6')
+        print("set brake")
+        self.cu.request(b"T6")
 
     def changeDriver(self, driverButton, driverObj):
-        self.driverChangeText = QInputDialog.getText(self, 'Change driver name', 'Driver Name', 0, driverButton.text().split('\n')[0])
+        self.driverChangeText = QInputDialog.getText(
+            self,
+            "Change driver name",
+            "Driver Name",
+            0,
+            driverButton.text().split("\n")[0],
+        )
         if self.driverChangeText[1] == True:
-            driverButton.setText(self.driverChangeText[0] + '\n' + 'Ctrl: ' + str(driverObj.CtrlNum))
+            driverButton.setText(
+                self.driverChangeText[0] + "\n" + "Ctrl: " + str(driverObj.CtrlNum)
+            )
             driverObj.name = self.driverChangeText[0]
 
-    def updateDisplay(self, binMode = None):
+    def updateDisplay(self, binMode=None):
         if binMode != None:
-            if binMode[2] == '1':
-                self.fuelmode.setText('Real')
-            elif binMode[3] == '1':
-                self.fuelmode.setText('On')
-            elif binMode[3] == '0':
-                self.fuelmode.setText('Off')
-            if binMode[1] == '1':
-                self.pitLaneStatus.setText('Exists')
+            if binMode[2] == "1":
+                self.fuelmode.setText("Real")
+            elif binMode[3] == "1":
+                self.fuelmode.setText("On")
+            elif binMode[3] == "0":
+                self.fuelmode.setText("Off")
+            if binMode[1] == "1":
+                self.pitLaneStatus.setText("Exists")
             else:
-                self.pitLaneStatus.setText('Missing')
-            if binMode[0] == '1':
-                self.lapCounter.setText('Exists')
+                self.pitLaneStatus.setText("Missing")
+            if binMode[0] == "1":
+                self.lapCounter.setText("Exists")
             else:
-                self.lapCounter.setText('Missing')
+                self.lapCounter.setText("Missing")
         driversInPlay = [driver for driver in self.driverArr if driver.time]
         if len(driversInPlay) + 1 > self.mainLayout.rowCount():
             self.addDriver()
         for pos, driver in enumerate(sorted(driversInPlay, key=posgetter), start=1):
             if pos == 1:
-                if hasattr(self, 'leader') and self.leader != driver:
-                    print('pos change')
-#                self.animation.start()
+                if hasattr(self, "leader") and self.leader != driver:
+                    print("pos change")
+                #                self.animation.start()
                 self.leader = driver
                 if self.start is None:
                     t = "0.0"
                 else:
                     t = formattime(driver.time - self.start, True)
             elif driver.lapcount == self.leader.lapcount:
-                t = '+%ss' % formattime(driver.time - self.leader.time)
+                t = "+%ss" % formattime(driver.time - self.leader.time)
             else:
                 gap = self.leader.lapcount - driver.lapcount
-                t = '+%d Lap%s' % (gap, 's' if gap != 1 else '')
-            self.driverBtn[pos].setText(driver.name + '\n' + 'Ctrl: ' + str(driver.CtrlNum))
+                t = "+%d Lap%s" % (gap, "s" if gap != 1 else "")
+            self.driverBtn[pos].setText(
+                driver.name + "\n" + "Ctrl: " + str(driver.CtrlNum)
+            )
             self.totalTime[pos].setText(t)
             self.lapcount[pos].display(driver.lapcount)
             self.laptime[pos].display(formattime(driver.lapTime))
             self.bestlaptime[pos].display(formattime(driver.bestLapTime))
             self.fuelbar[pos].setValue(driver.fuellevel)
             if driver.fuellevel > 0:
-                self.fuelbar[pos].setStyleSheet("QProgressBar{ color: white; background-color: black; border: 5px solid black; border-radius: 10px; text-align: center}\
-                                                 QProgressBar::chunk { background: qlineargradient(x1: 1, y1: 0.5, x2: 0, y2: 0.5, stop: 0 #00AA00, stop: " + str(0.92 - (1 / (driver.fuellevel))) + " #22FF22, stop: " + str(0.921 - (1 / (driver.fuellevel))) + " #22FF22, stop: " + str(1.001 - (1 / (driver.fuellevel))) + " red, stop: 1 #550000); }")
+                self.fuelbar[pos].setStyleSheet(
+                    "QProgressBar{ color: white; background-color: black; border: 5px solid black; border-radius: 10px; text-align: center}\
+                                                 QProgressBar::chunk { background: qlineargradient(x1: 1, y1: 0.5, x2: 0, y2: 0.5, stop: 0 #00AA00, stop: "
+                    + str(0.92 - (1 / (driver.fuellevel)))
+                    + " #22FF22, stop: "
+                    + str(0.921 - (1 / (driver.fuellevel)))
+                    + " #22FF22, stop: "
+                    + str(1.001 - (1 / (driver.fuellevel)))
+                    + " red, stop: 1 #550000); }"
+                )
             self.pits[pos].display(driver.pitcount)
-        if hasattr(self, 'leader') and self.session.session is not None and self.start is not None:
+        if (
+            hasattr(self, "leader")
+            and self.session.session is not None
+            and self.start is not None
+        ):
             if self.session.type != None:
-                self.racemode.setText(self.session.session + ' ' + str(self.session.amount) + ' ' + self.session.type)
-            if self.session.type == 'Laps':
+                self.racemode.setText(
+                    self.session.session
+                    + " "
+                    + str(self.session.amount)
+                    + " "
+                    + self.session.type
+                )
+            if self.session.type == "Laps":
                 if self.leader.lapcount > self.session.amount:
                     self.stopSession(driversInPlay, self.start)
-            elif self.session.type == 'Timed':
+            elif self.session.type == "Timed":
                 if self.leader.time - self.start > self.session.amount * 60000:
                     self.stopSession(driversInPlay, self.start)
             if self.session.type == None:
@@ -887,25 +969,26 @@ class RmsFrame(QFrame):
         self.session.saveSessionData(driversInPlay, start)
         self.clearCU()
         self.session.sessionOver()
-        
+
     def showLeaderboard(self):
         self.leaderBoard = LBDialog(self.session.leaderboard)
         self.leaderBoard.show()
-      
+
+
 class RaceSession(QObject):
     def __init__(self):
         super().__init__()
         self.amount = None
         self.session = None
-        self.sessionSteps = ['Practice', 'Qualification', 'Race']
+        self.sessionSteps = ["Practice", "Qualification", "Race"]
 
     def setRace(self, raceDict):
         self.leaderboard = {}
         self.raceDict = raceDict
         for stepIdx, step in enumerate(self.sessionSteps):
             if step in raceDict:
-                self.type = raceDict[step]['mode']
-                self.amount = int(raceDict[step]['amount'])
+                self.type = raceDict[step]["mode"]
+                self.amount = int(raceDict[step]["amount"])
                 self.session = step
                 self.currentStep = stepIdx
                 break
@@ -916,83 +999,105 @@ class RaceSession(QObject):
             if len(self.sessionSteps) > self.currentStep:
                 if self.sessionSteps[self.currentStep] in self.raceDict:
                     self.session = self.sessionSteps[self.currentStep]
-                    self.amount = int(self.raceDict[self.sessionSteps[self.currentStep]]['amount'])
-                    self.type = self.raceDict[self.sessionSteps[self.currentStep]]['mode']
+                    self.amount = int(
+                        self.raceDict[self.sessionSteps[self.currentStep]]["amount"]
+                    )
+                    self.type = self.raceDict[self.sessionSteps[self.currentStep]][
+                        "mode"
+                    ]
                     break
             else:
                 self.type = None
-                self.session = 'Race Finished'
+                self.session = "Race Finished"
 
     def saveSessionData(self, driverArr, start):
-        if self.sessionSteps[self.currentStep] == 'Qualification':
+        if self.sessionSteps[self.currentStep] == "Qualification":
             self.showStartRanking = StartRankDialog(driverArr)
             self.showStartRanking.exec_()
 
         self.leaderboard[self.sessionSteps[self.currentStep]] = []
         for driver in sorted(driverArr, key=posgetter):
-            self.leaderboard[self.sessionSteps[self.currentStep]].append({'laps': driver.lapcount, 'total': driver.time - start,\
-                     'best': driver.bestLapTime, 'pits': driver.pitcount, 'name': driver.name})
+            self.leaderboard[self.sessionSteps[self.currentStep]].append(
+                {
+                    "laps": driver.lapcount,
+                    "total": driver.time - start,
+                    "best": driver.bestLapTime,
+                    "pits": driver.pitcount,
+                    "name": driver.name,
+                }
+            )
             driver.bestLapTime = None
             driver.time = None
             driver.lapcount = 0
             driver.pitcount = 0
 
+
 class StartRankDialog(QDialog):
     def __init__(self, driverArr):
         super().__init__()
         self.driverArr = driverArr
-        self.setWindowTitle('Starting Grid')
+        self.setWindowTitle("Starting Grid")
         self.setupUI()
 
     def setupUI(self):
         self.vlayout = QVBoxLayout(self)
-        self.vlayout.addWidget(QLabel('Starting Grid'))
-        self.table = QTableWidget(len(self.driverArr),3)
+        self.vlayout.addWidget(QLabel("Starting Grid"))
+        self.table = QTableWidget(len(self.driverArr), 3)
         self.vlayout.addWidget(self.table)
         self.table.verticalHeader().hide()
-        self.table.setHorizontalHeaderLabels(['Grid Position', 'Driver', 'Best Lap'])
-        for idx, driver in enumerate(sorted(self.driverArr, key = lambda x: (x.bestLapTime is None, x.bestLapTime))):
-            self.table.setItem(idx,0, QTableWidgetItem(str(idx + 1)))
-            self.table.setItem(idx,1, QTableWidgetItem(driver.name))
-            self.table.setItem(idx,2, QTableWidgetItem(formattime(driver.bestLapTime)))
-        self.okBtn = QPushButton('Ok')
+        self.table.setHorizontalHeaderLabels(["Grid Position", "Driver", "Best Lap"])
+        for idx, driver in enumerate(
+            sorted(self.driverArr, key=lambda x: (x.bestLapTime is None, x.bestLapTime))
+        ):
+            self.table.setItem(idx, 0, QTableWidgetItem(str(idx + 1)))
+            self.table.setItem(idx, 1, QTableWidgetItem(driver.name))
+            self.table.setItem(idx, 2, QTableWidgetItem(formattime(driver.bestLapTime)))
+        self.okBtn = QPushButton("Ok")
         self.vlayout.addWidget(self.okBtn)
         self.okBtn.clicked.connect(self.accept)
+
 
 class LBDialog(QTabWidget):
     def __init__(self, leaderboard):
         super().__init__()
         self.leaderboard = leaderboard
-        self.setWindowTitle('Leaderboard')
+        self.setWindowTitle("Leaderboard")
         self.setWindowModality(Qt.ApplicationModal)
         self.setupUI()
 
     def setupUI(self):
         for session in sorted(self.leaderboard.keys()):
-            self.table = QTableWidget(len(self.leaderboard[session]),6)
+            self.table = QTableWidget(len(self.leaderboard[session]), 6)
             self.table.verticalHeader().hide()
             self.tabWidget = QWidget()
-            self.okBtn = QPushButton('Ok')
+            self.okBtn = QPushButton("Ok")
             self.okBtn.clicked.connect(self.close)
             self.addTab(self.tabWidget, session)
             self.widgetLayout = QVBoxLayout()
             self.widgetLayout.addWidget(self.table)
             self.widgetLayout.addWidget(self.okBtn)
             self.tabWidget.setLayout(self.widgetLayout)
-            self.table.setHorizontalHeaderLabels(['Position', 'Driver', 'Time', 'Laps', 'Best Lap', 'Pitstops'])
+            self.table.setHorizontalHeaderLabels(
+                ["Position", "Driver", "Time", "Laps", "Best Lap", "Pitstops"]
+            )
             for idx, driverInfo in enumerate(self.leaderboard[session]):
-                self.table.setItem(idx,0, QTableWidgetItem(str(idx + 1)))
-                self.table.setItem(idx,1, QTableWidgetItem(driverInfo['name']))
-                self.table.setItem(idx,2, QTableWidgetItem(formattime(driverInfo['total'])))
-                self.table.setItem(idx,3, QTableWidgetItem(str(driverInfo['laps'])))
-                self.table.setItem(idx,4, QTableWidgetItem(formattime(driverInfo['best'])))
-                self.table.setItem(idx,5, QTableWidgetItem(str(driverInfo['pits'])))
+                self.table.setItem(idx, 0, QTableWidgetItem(str(idx + 1)))
+                self.table.setItem(idx, 1, QTableWidgetItem(driverInfo["name"]))
+                self.table.setItem(
+                    idx, 2, QTableWidgetItem(formattime(driverInfo["total"]))
+                )
+                self.table.setItem(idx, 3, QTableWidgetItem(str(driverInfo["laps"])))
+                self.table.setItem(
+                    idx, 4, QTableWidgetItem(formattime(driverInfo["best"]))
+                )
+                self.table.setItem(idx, 5, QTableWidgetItem(str(driverInfo["pits"])))
+
 
 class RmsDriver(QObject):
     def __init__(self, driverNum):
         super().__init__()
         self.CtrlNum = driverNum
-        self.name = 'Driver ' + str(driverNum)
+        self.name = "Driver " + str(driverNum)
         self.lapcount = 0
         self.bestLapTime = None
         self.lapTime = None
@@ -1006,27 +1111,35 @@ class RmsDriver(QObject):
         self.nameFont = QFont()
         self.nameFont.setPointSize(20)
         self.nameFont.setBold(True)
-        self.nameBtn = QPushButton(self.name + '\n' + 'Ctrl: ' + str(self.CtrlNum))
-        self.nameBtn.setToolTip('Click to change driver name')
+        self.nameBtn = QPushButton(self.name + "\n" + "Ctrl: " + str(self.CtrlNum))
+        self.nameBtn.setToolTip("Click to change driver name")
         self.nameBtn.setFont(self.nameFont)
-        self.nameBtn.setStyleSheet("QPushButton { border: 5px solid black; border-radius: 10px; background-color: white}")
+        self.nameBtn.setStyleSheet(
+            "QPushButton { border: 5px solid black; border-radius: 10px; background-color: white}"
+        )
 
         self.lapCountLCD = QLCDNumber(3)
-        self.lapCountLCD.setStyleSheet("QLCDNumber{ border-radius: 10px; background-color: black}")
+        self.lapCountLCD.setStyleSheet(
+            "QLCDNumber{ border-radius: 10px; background-color: black}"
+        )
         lcdPalette = self.lapCountLCD.palette()
         lcdPalette.setColor(lcdPalette.WindowText, QColor(255, 255, 0))
         self.lapCountLCD.setPalette(lcdPalette)
         self.lapCountLCD.display(self.lapcount)
 
         self.bestLapLCD = QLCDNumber(6)
-        self.bestLapLCD.setStyleSheet("QLCDNumber{ border-radius: 10px; background-color: black}")
+        self.bestLapLCD.setStyleSheet(
+            "QLCDNumber{ border-radius: 10px; background-color: black}"
+        )
         lcdPalette = self.bestLapLCD.palette()
         lcdPalette.setColor(lcdPalette.WindowText, QColor(255, 255, 0))
         self.bestLapLCD.setPalette(lcdPalette)
         self.bestLapLCD.display(self.bestLapTime)
 
         self.lapLCD = QLCDNumber(6)
-        self.lapLCD.setStyleSheet("QLCDNumber{ border-radius: 10px; background-color: black}")
+        self.lapLCD.setStyleSheet(
+            "QLCDNumber{ border-radius: 10px; background-color: black}"
+        )
         lcdPalette = self.lapLCD.palette()
         lcdPalette.setColor(lcdPalette.WindowText, QColor(255, 255, 0))
         self.lapLCD.setPalette(lcdPalette)
@@ -1034,19 +1147,29 @@ class RmsDriver(QObject):
 
         self.fuelbar = QProgressBar()
         self.fuelbar.setOrientation(Qt.Horizontal)
-        self.fuelbar.setStyleSheet("QProgressBar{ color: white; background-color: black; border: 5px solid black; border-radius: 10px; text-align: center}\
-                                    QProgressBar::chunk { background: qlineargradient(x1: 1, y1: 0.5, x2: 0, y2: 0.5, stop: 0 #00AA00, stop: " + str(0.92 - (1 / (self.fuellevel))) + " #22FF22, stop: " + str(0.921 - (1 / (self.fuellevel))) + " #22FF22, stop: " + str(1.001 - (1 / (self.fuellevel))) + " red, stop: 1 #550000); }")
+        self.fuelbar.setStyleSheet(
+            "QProgressBar{ color: white; background-color: black; border: 5px solid black; border-radius: 10px; text-align: center}\
+                                    QProgressBar::chunk { background: qlineargradient(x1: 1, y1: 0.5, x2: 0, y2: 0.5, stop: 0 #00AA00, stop: "
+            + str(0.92 - (1 / (self.fuellevel)))
+            + " #22FF22, stop: "
+            + str(0.921 - (1 / (self.fuellevel)))
+            + " #22FF22, stop: "
+            + str(1.001 - (1 / (self.fuellevel)))
+            + " red, stop: 1 #550000); }"
+        )
         self.fuelbar.setMinimum(0)
         self.fuelbar.setMaximum(15)
         self.fuelbar.setValue(self.fuellevel)
 
         self.pitCountLCD = QLCDNumber(2)
-        self.pitCountLCD.setStyleSheet("QLCDNumber{ border-radius: 10px; background-color: black}")
+        self.pitCountLCD.setStyleSheet(
+            "QLCDNumber{ border-radius: 10px; background-color: black}"
+        )
         lcdPalette = self.pitCountLCD.palette()
         lcdPalette.setColor(lcdPalette.WindowText, QColor(255, 0, 0))
         self.pitCountLCD.setPalette(lcdPalette)
         self.pitCountLCD.display(self.pitcount)
-   
+
     def getName(self):
         return self.name
 
@@ -1058,7 +1181,7 @@ class RmsDriver(QObject):
 
     def getBestLapLCD(self):
         return self.bestLapLCD
-    
+
     def getLapLCD(self):
         return self.lapLCD
 
@@ -1067,7 +1190,7 @@ class RmsDriver(QObject):
 
     def setCtrlNum(self, num):
         self.CtrlNum = num
-        self.nameBtn.setText(self.name + '\n' + 'Ctrl: ' + str(self.CtrlNum))
+        self.nameBtn.setText(self.name + "\n" + "Ctrl: " + str(self.CtrlNum))
 
     def getPits(self):
         return self.pitCountLCD
@@ -1079,11 +1202,12 @@ class RmsDriver(QObject):
                 self.bestLapTime = self.lapTime
             self.lapcount += 1
         self.time = timer.timestamp
-        
+
+
 class ControlUnit(QObject):
     """Interface to a Carrera Digital 124/132 Control Unit."""
 
-    class Status(namedtuple('Status', 'fuel start mode pit display')):
+    class Status(namedtuple("Status", "fuel start mode pit display")):
         """Response type returned if no timer events are pending.
         This is a :class:`collections.namedtuple` subclass with the
         following read-only attributes:
@@ -1116,7 +1240,7 @@ class ControlUnit(QObject):
         LAP_COUNTER_MODE = 0x8
         """Mode bit mask indicating a lap counter is connected."""
 
-    class Timer(namedtuple('Timer', 'address timestamp sector')):
+    class Timer(namedtuple("Timer", "address timestamp sector")):
         """Response type for timer events.
         This is a :class:`collections.namedtuple` subclass with the
         following read-only attributes:
@@ -1131,39 +1255,40 @@ class ControlUnit(QObject):
         |                   |       | times reported by Check Lanes)          |
         +-------------------+-------+-----------------------------------------+
         """
+
         pass
 
-    PACE_CAR_KEY = b'T1'
+    PACE_CAR_KEY = b"T1"
     """Request for emulating the Control Unit's PACE CAR/ESC key."""
 
-    START_KEY = b'T2'
+    START_KEY = b"T2"
     """Request for emulating the Control Unit's START/ENTER key."""
 
-    SPEED_KEY = b'T5'
+    SPEED_KEY = b"T5"
     """Request for emulating the Control Unit's SPEED key."""
 
-    BRAKE_KEY = b'T6'
+    BRAKE_KEY = b"T6"
     """Request for emulating the Control Unit's BRAKE key."""
 
-    FUEL_KEY = b'T7'
+    FUEL_KEY = b"T7"
     """Request for emulating the Control Unit's FUEL key."""
 
-    CODE_KEY = b'T8'
+    CODE_KEY = b"T8"
     """Request for emulating the Control Unit's CODE key."""
 
     def __init__(self, device, **kwargs):
         if isinstance(device, QUdpSocket):
             self.__connection = device
         else:
-            logger.debug('Connecting to %s', device)
+            logger.debug("Connecting to %s", device)
             self.__connection = connection.open(device, **kwargs)
-            logger.debug('Connection established')
+            logger.debug("Connection established")
         self.requestsent = None
         self.stoprequest = False
-            
+
     def close(self):
         """Close the connection to the CU."""
-        logger.debug('Closing connection')
+        logger.debug("Closing connection")
         self.__connection.close()
 
     def clrpos(self):
@@ -1172,74 +1297,74 @@ class ControlUnit(QObject):
 
     def ignore(self, mask):
         """Ignore the controllers represented by bitmask `mask`."""
-        self.request(protocol.pack('cBC', b':', mask))
+        self.request(protocol.pack("cBC", b":", mask))
 
-    def request(self, buf=b'generalQuery', maxlength=None):
+    def request(self, buf=b"generalQuery", maxlength=None):
         """Send a message to the CU and wait for a response.
         The returned value will be an instance of either
         :class:`ControlUnit.Timer` or :class:`ControlUnit.Status`,
         depending on whether any timer events are pending.
         """
-        if buf.startswith(b'T'):
+        if buf.startswith(b"T"):
             self.stoprequest = True
             while self.requestsent:
                 app.processEvents()
             self.__connection.write(buf)
             return
-        logger.debug('Sending message %r', buf)
+        logger.debug("Sending message %r", buf)
         self.__connection.write(buf)
         self.requestsent = True
-        
+
     def receivedUDP(self, udpData):
- #       print(udpData)
+        #       print(udpData)
         self.requestsent = False
-        if self.stoprequest and not udpData.startswith(b'T'):
+        if self.stoprequest and not udpData.startswith(b"T"):
             return
-        if udpData.startswith(b'T') or udpData.startswith(b'?T'):
+        if udpData.startswith(b"T") or udpData.startswith(b"?T"):
             self.request()
             self.stoprequest = False
-        elif udpData.startswith(b'?:'):
+        elif udpData.startswith(b"?:"):
             # recent CU versions report two extra unknown bytes with '?:'
             try:
-                parts = protocol.unpack('2x8YYYBYC', udpData)
+                parts = protocol.unpack("2x8YYYBYC", udpData)
             except protocol.ChecksumError:
-                parts = protocol.unpack('2x8YYYBYxxC', udpData)
+                parts = protocol.unpack("2x8YYYBYxxC", udpData)
             fuel, (start, mode, pitmask, display) = parts[:8], parts[8:]
             pit = tuple(pitmask & (1 << n) != 0 for n in range(8))
             custat = ControlUnit.Status(fuel, start, mode, pit, display)
             w.handle_data(custat)
-        elif udpData.startswith(b'Reset&:') or udpData.startswith(b'?='):
-            if udpData.startswith(b'Reset'):
+        elif udpData.startswith(b"Reset&:") or udpData.startswith(b"?="):
+            if udpData.startswith(b"Reset"):
                 self.request()
             else:
                 w.run()
-        elif udpData.startswith(b'?'):
-            address, timestamp, sector = protocol.unpack('xYIYC', udpData)
+        elif udpData.startswith(b"?"):
+            address, timestamp, sector = protocol.unpack("xYIYC", udpData)
             cutimer = ControlUnit.Timer(address - 1, timestamp, sector)
             w.handle_data(cutimer)
-        elif udpData.startswith(b'0'):
-            w.setVersion(protocol.unpack('x4sC', udpData)[0])
+        elif udpData.startswith(b"0"):
+            w.setVersion(protocol.unpack("x4sC", udpData)[0])
             w.initUI()
-        elif udpData.startswith(b'clearCU'):
-            cudata = str(udpData, 'utf-8').split('&')[1]
-            if cudata.startswith(':'):
-                cleardata = bytes('?' + cudata, 'utf-8')
+        elif udpData.startswith(b"clearCU"):
+            cudata = str(udpData, "utf-8").split("&")[1]
+            if cudata.startswith(":"):
+                cleardata = bytes("?" + cudata, "utf-8")
                 try:
-                    parts = protocol.unpack('2x8YYYBYC', cleardata)
+                    parts = protocol.unpack("2x8YYYBYC", cleardata)
                 except protocol.ChecksumError:
-                    parts = protocol.unpack('2x8YYYBYxxC', cleardata)
+                    parts = protocol.unpack("2x8YYYBYxxC", cleardata)
                 fuel, (start, mode, pitmask, display) = parts[:8], parts[8:]
                 pit = tuple(pitmask & (1 << n) != 0 for n in range(8))
                 cuclear = ControlUnit.Status(fuel, start, mode, pit, display)
                 w.rmsframe.clearCU(cuclear)
             else:
-                self.request(b'clearCU')
+                self.request(b"clearCU")
         else:
             self.request()
-                    
+
     def reset(self):
         """Reset the CU timer."""
-        self.request(b'Reset')
+        self.request(b"Reset")
 
     def setbrake(self, address, value):
         """Set the brake value for controller `address`."""
@@ -1252,9 +1377,9 @@ class ControlUnit(QObject):
     def setlap(self, value):
         """Set the current lap displayed by the Position Tower."""
         if value < 0 or value > 255:
-            raise ValueError('Lap value out of range')
+            raise ValueError("Lap value out of range")
         self.setlap_hi(value >> 4)
-        self.setlap_lo(value & 0xf)
+        self.setlap_lo(value & 0xF)
 
     def setlap_hi(self, value):
         """Set the high nibble of the current lap."""
@@ -1267,7 +1392,7 @@ class ControlUnit(QObject):
     def setpos(self, address, position):
         """Set the controller's position displayed by the Position Tower."""
         if position < 1 or position > 8:
-            raise ValueError('Position out of range')
+            raise ValueError("Position out of range")
         self.setword(6, address, position)
 
     def setspeed(self, address, value):
@@ -1276,23 +1401,23 @@ class ControlUnit(QObject):
 
     def setword(self, word, address, value, repeat=1):
         if word < 0 or word > 31:
-            raise ValueError('Command word out of range')
+            raise ValueError("Command word out of range")
         if address < 0 or address > 7:
-            raise ValueError('Address out of range')
+            raise ValueError("Address out of range")
         if value < 0 or value > 15:
-            raise ValueError('Value out of range')
+            raise ValueError("Value out of range")
         if repeat < 1 or repeat > 15:
-            raise ValueError('Repeat count out of range')
-        buf = protocol.pack('cBYYC', b'J', word | address << 5, value, repeat)
+            raise ValueError("Repeat count out of range")
+        buf = protocol.pack("cBYYC", b"J", word | address << 5, value, repeat)
         return self.request(buf)
 
     def start(self):
         self.request(self.START_KEY)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     w = Rms()
-    
+
     sys.exit(app.exec_())
