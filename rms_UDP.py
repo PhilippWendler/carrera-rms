@@ -269,7 +269,7 @@ class Rms(QMainWindow):
 
     def setVersion(self, data):
         self.setWindowTitle(
-            "Race Management System V1.0   CU Version:" + str(data, "utf-8")
+            "Race Management System V1.0   CU Version:" + str(data)
         )
         self.CUconnected = True
 

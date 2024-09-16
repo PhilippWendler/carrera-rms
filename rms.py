@@ -203,7 +203,7 @@ class Rms(QMainWindow):
         rectDesktop = app.desktop().availableGeometry()
         self.startLights.resize(rectDesktop.width() / 2, (rectDesktop.width() / 2) / 5)
         self.setWindowTitle(
-            "Race Management System V1.0   CU Version:" + str(self.cuVersion, "utf-8")
+            "Race Management System V1.0   CU Version:" + str(self.cuVersion)
         )
         self.rmsframe = RmsFrame(self.cu)
         self.startLights.spacekey.activated.connect(self.rmsframe.racestart)
