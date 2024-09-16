@@ -287,11 +287,11 @@ class Rms(QMainWindow):
 
     def run(self):
         self.last = None
-        self.cu.request()
+        self.cu.poll()
 
     def handle_data(self, data):
         if data == self.last:
-            self.cu.request()
+            self.cu.poll()
             return
         elif isinstance(data, ControlUnit.Status):
             self.handle_status(data)
@@ -300,7 +300,7 @@ class Rms(QMainWindow):
         else:
             pass
         self.last = data
-        self.cu.request()
+        self.cu.poll()
         if self.shutdown:
             sys.exit()
 
@@ -851,7 +851,7 @@ class RmsFrame(QFrame):
             elif self.clearreason == "start":
                 self.cu.start()
             else:
-                self.cu.request()
+                self.cu.poll()
 
     def pressCode(self):
         print("press Code")
@@ -1321,7 +1321,7 @@ class ControlUnit(QObject):
         if self.stoprequest and not udpData.startswith(b"T"):
             return
         if udpData.startswith(b"T") or udpData.startswith(b"?T"):
-            self.request()
+            self.poll()
             self.stoprequest = False
         elif udpData.startswith(b"?:"):
             # recent CU versions report two extra unknown bytes with '?:'
@@ -1335,7 +1335,7 @@ class ControlUnit(QObject):
             w.handle_data(custat)
         elif udpData.startswith(b"Reset&:") or udpData.startswith(b"?="):
             if udpData.startswith(b"Reset"):
-                self.request()
+                self.poll()
             else:
                 w.run()
         elif udpData.startswith(b"?"):
@@ -1360,7 +1360,7 @@ class ControlUnit(QObject):
             else:
                 self.request(b"clearCU")
         else:
-            self.request()
+            self.poll()
 
     def reset(self):
         """Reset the CU timer."""

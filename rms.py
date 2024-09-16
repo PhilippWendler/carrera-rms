@@ -215,7 +215,7 @@ class Rms(QMainWindow):
             if self.shutdown:
                 break
             try:
-                data = self.cu.request()
+                data = self.cu.poll()
                 app.processEvents()
                 if data == last:
                     continue
@@ -722,9 +722,9 @@ class RmsFrame(QFrame):
 
     def clearCU(self):
         # discard remaining timer messages
-        status = self.cu.request()
+        status = self.cu.poll()
         while not isinstance(status, ControlUnit.Status):
-            status = self.cu.request()
+            status = self.cu.poll()
         self.status = status
         # reset cu timer
         self.cu.reset()
